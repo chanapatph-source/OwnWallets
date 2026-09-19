@@ -197,7 +197,7 @@ export const ExportSyncModal = ({
             <button
               id="btn-download-excel"
               onClick={handleDownloadExcel}
-              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs font-bold shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all"
+              className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white text-xs font-bold shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all"
             >
               <FileSpreadsheet className="w-4 h-4" />
               <span>ดาวน์โหลด Excel ทันที (.xlsx)</span>

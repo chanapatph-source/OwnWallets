@@ -116,22 +116,22 @@ export const BudgetAlertBanner = ({
   return (
     <div
       id="budget-alert-safe"
-      className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-4.5 text-slate-800 shadow-sm"
+      className="rounded-2xl bg-white border border-blue-100 p-4 sm:p-4.5 text-slate-800 shadow-sm"
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-4 h-4" />
           </div>
           <div className="truncate">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-slate-500">สถานะงบประมาณเดือนนี้</span>
-              <span className="px-1.5 py-0.5 text-[11px] font-medium bg-emerald-100 text-emerald-800 rounded">
+              <span className="px-1.5 py-0.5 text-[11px] font-medium bg-blue-100 text-blue-800 rounded">
                 อยู่ในเกณฑ์ดี ({percent.toFixed(0)}%)
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-600 truncate mt-0.5">
-              ใช้ไป {formatThaiCurrency(totalExpense)} / เหลืองบ <span className="font-semibold text-emerald-600">{formatThaiCurrency(remaining)}</span>
+              ใช้ไป {formatThaiCurrency(totalExpense)} / เหลืองบ <span className="font-semibold text-blue-600">{formatThaiCurrency(remaining)}</span>
             </p>
           </div>
         </div>
@@ -148,7 +148,7 @@ export const BudgetAlertBanner = ({
 
       <div className="mt-2.5 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
         <div
-          className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+          className="h-full bg-blue-600 rounded-full transition-all duration-500"
           style={{ width: `${Math.min(percent, 100)}%` }}
         />
       </div>

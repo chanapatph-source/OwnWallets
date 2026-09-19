@@ -131,7 +131,7 @@ export const TransactionModal = ({
               onClick={() => handleTypeChange('income')}
               className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-sm transition-all ${
                 type === 'income'
-                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -146,7 +146,7 @@ export const TransactionModal = ({
               จำนวนเงิน (บาท) *
             </label>
             <div className="flex items-center">
-              <span className={`text-2xl sm:text-3xl font-bold mr-2 ${type === 'expense' ? 'text-rose-500' : 'text-emerald-500'}`}>
+              <span className={`text-2xl sm:text-3xl font-bold mr-2 ${type === 'expense' ? 'text-rose-500' : 'text-blue-600'}`}>
                 ฿
               </span>
               <input
@@ -201,7 +201,7 @@ export const TransactionModal = ({
                     onClick={() => setCategoryId(cat.id)}
                     className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all ${
                       isSelected
-                        ? 'border-emerald-500 bg-emerald-50/80 text-emerald-900 ring-2 ring-emerald-500/20 shadow-xs'
+                        ? 'border-blue-500 bg-blue-50/90 text-blue-950 ring-2 ring-blue-500/30 shadow-xs font-semibold'
                         : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
                     }`}
                   >
@@ -229,7 +229,7 @@ export const TransactionModal = ({
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-emerald-500 focus:bg-white transition-colors"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors"
             />
           </div>
 
@@ -245,7 +245,7 @@ export const TransactionModal = ({
               value={note}
               onChange={e => setNote(e.target.value)}
               placeholder="เช่น กาแฟอเมซอน, ซื้อเสื้อยืด, ค่าไฟห้องพัก"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-emerald-500 focus:bg-white transition-colors"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-colors"
             />
           </div>
 
@@ -257,7 +257,7 @@ export const TransactionModal = ({
               className={`w-full py-3.5 rounded-2xl font-bold text-white shadow-lg flex items-center justify-center gap-2 active:scale-[0.99] transition-all ${
                 type === 'expense'
                   ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/30'
-                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'
+                  : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30'
               }`}
             >
               <Check className="w-5 h-5" />

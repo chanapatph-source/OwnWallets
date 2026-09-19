@@ -88,11 +88,11 @@ export const BudgetSettingsModal = ({
           {/* Main Monthly Budget */}
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
             <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-              <Target className="w-4 h-4 text-emerald-600" />
+              <Target className="w-4 h-4 text-blue-600" />
               งบประมาณรายเดือนรวม (บาท) *
             </label>
             <div className="flex items-center mt-2">
-              <span className="text-2xl font-bold text-emerald-600 mr-2">฿</span>
+              <span className="text-2xl font-bold text-blue-600 mr-2">฿</span>
               <input
                 id="input-monthly-budget-limit"
                 type="number"

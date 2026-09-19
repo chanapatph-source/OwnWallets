@@ -55,7 +55,7 @@ export const MonthlyChartSummary = ({
         </button>
 
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-emerald-600" />
+          <Calendar className="w-4 h-4 text-blue-600" />
           <h2 className="text-base sm:text-lg font-bold text-slate-800">
             {formatMonthLabel(selectedMonth)}
           </h2>
@@ -123,7 +123,7 @@ export const MonthlyChartSummary = ({
         </div>
         <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
           <div
-            className="h-full bg-emerald-500 transition-all duration-500"
+            className="h-full bg-blue-600 transition-all duration-500"
             style={{ width: `${incomeShare}%` }}
             title={`รายรับ: ${formatThaiCurrency(stats.totalIncome)}`}
           />
@@ -135,7 +135,7 @@ export const MonthlyChartSummary = ({
         </div>
         <div className="flex items-center justify-between text-[11px] font-medium text-slate-500 mt-2">
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
             รายรับ ({incomeShare.toFixed(0)}%)
           </span>
           <span className="flex items-center gap-1">
@@ -149,7 +149,7 @@ export const MonthlyChartSummary = ({
       <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
           <div className="flex items-center gap-1.5">
-            <PieChartIcon className="w-4 h-4 text-emerald-600" />
+            <PieChartIcon className="w-4 h-4 text-blue-600" />
             <h3 className="font-bold text-slate-800 text-sm sm:text-base">
               การวิเคราะห์รายจ่าย
             </h3>

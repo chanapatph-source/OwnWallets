@@ -71,7 +71,7 @@ export const TransactionList = ({
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="ค้นหารายการ, หมายเหตุ หรือหมวดหมู่..."
-            className="w-full pl-9 pr-3.5 py-2.5 bg-white border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none transition-colors shadow-2xs"
+            className="w-full pl-9 pr-3.5 py-2.5 bg-white border border-slate-200/80 rounded-xl text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none transition-colors shadow-2xs"
           />
         </div>
 
@@ -82,7 +82,7 @@ export const TransactionList = ({
             onClick={() => setFilterType('all')}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               filterType === 'all'
-                ? 'bg-slate-800 text-white'
+                ? 'bg-slate-900 text-white shadow-2xs'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -93,7 +93,7 @@ export const TransactionList = ({
             onClick={() => setFilterType('expense')}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               filterType === 'expense'
-                ? 'bg-rose-500 text-white'
+                ? 'bg-rose-500 text-white shadow-2xs'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -104,7 +104,7 @@ export const TransactionList = ({
             onClick={() => setFilterType('income')}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               filterType === 'income'
-                ? 'bg-emerald-500 text-white'
+                ? 'bg-blue-600 text-white shadow-2xs'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -129,7 +129,7 @@ export const TransactionList = ({
             <button
               id="btn-empty-add-transaction"
               onClick={onOpenAddModal}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors shadow-sm"
             >
               + บันทึกรายการแรก
             </button>
