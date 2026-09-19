@@ -11,9 +11,8 @@ import {
   RotateCcw,
   Sparkles,
   Camera,
-  Home,
-  Monitor,
-  Smartphone,
+  Receipt,
+  ScanLine,
   CheckCircle2,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
@@ -37,7 +36,8 @@ import { TransactionModal } from './components/TransactionModal';
 import { BudgetSettingsModal } from './components/BudgetSettingsModal';
 import { ExportSyncModal } from './components/ExportSyncModal';
 import { CapturePreviewModal } from './components/CapturePreviewModal';
-import { AddToHomeScreenModal } from './components/AddToHomeScreenModal';
+import { DailyExpenseSlipModal } from './components/DailyExpenseSlipModal';
+import { SlipScannerModal } from './components/SlipScannerModal';
 
 export default function App() {
   // Current active date month
@@ -57,7 +57,8 @@ export default function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [isA2HSOpen, setIsA2HSOpen] = useState(false);
+  const [isDailySlipOpen, setIsDailySlipOpen] = useState(false);
+  const [isSlipScannerOpen, setIsSlipScannerOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   // Screen capture states
@@ -67,6 +68,7 @@ export default function App() {
   const [capturedFilename, setCapturedFilename] = useState<string>('');
   const [isCaptureModalOpen, setIsCaptureModalOpen] = useState(false);
   const [captureSuccessToast, setCaptureSuccessToast] = useState(false);
+  const [slipSuccessToast, setSlipSuccessToast] = useState<string | null>(null);
 
   // Device frame vs Full web mode
   const [isDeviceFramed, setIsDeviceFramed] = useState<boolean>(() => {
@@ -107,12 +109,36 @@ export default function App() {
     };
   }, []);
 
+  // Global keyboard shortcut to open Daily Expense Slip (Ctrl+S, Cmd+S, or Shift+S)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if user pressed Ctrl+S or Cmd+S
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        setIsDailySlipOpen(true);
+        return;
+      }
+      // Or PrintScreen key
+      if (e.key === 'PrintScreen') {
+        setIsDailySlipOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Compute monthly statistics
   const stats = useMemo(() => {
     return calculateMonthlyStats(transactions, currentYearMonth, budget);
   }, [transactions, currentYearMonth, budget]);
 
-  // Screen capture action
+  // Daily slip trigger handler (used by shortcut and capture buttons)
+  const handleOpenDailySlip = () => {
+    setIsDailySlipOpen(true);
+  };
+
+  // Full Screen capture action
   const handleCaptureScreen = async () => {
     if (!screenRef.current || isCapturing) return;
     setIsCapturing(true);
@@ -223,7 +249,8 @@ export default function App() {
       }}
       screenRef={screenRef}
       onCaptureScreen={handleCaptureScreen}
-      onOpenA2HS={() => setIsA2HSOpen(true)}
+      onOpenDailySlip={handleOpenDailySlip}
+      onOpenSlipScanner={() => setIsSlipScannerOpen(true)}
       isCapturing={isCapturing}
       isDeviceFramed={isDeviceFramed}
       onToggleDeviceFrame={handleToggleDeviceFrame}
@@ -249,18 +276,28 @@ export default function App() {
               </div>
             </div>
 
-            {/* Top Actions: Capture screen, Month select, Settings */}
+            {/* Top Actions: Slip Scanner, Daily Slip, Month select, Settings */}
             <div className="flex items-center gap-1.5">
-              {/* Quick Capture Button on Header */}
+              {/* Slip Scanner Button */}
               <button
-                id="btn-header-capture-screen"
-                onClick={handleCaptureScreen}
-                disabled={isCapturing}
+                id="btn-header-slip-scanner"
+                onClick={() => setIsSlipScannerOpen(true)}
                 className="p-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 transition-colors active:scale-95 shadow-2xs flex items-center gap-1 text-xs font-semibold"
-                title="แคปหน้าจอเพื่อบันทึกเป็นรูปภาพ"
+                title="จดบันทึกรายจ่ายผ่านสลิปโอนเงิน (AI OCR)"
               >
-                <Camera className="w-3.5 h-3.5 text-blue-600" />
-                <span className="hidden sm:inline text-[11px]">แคปรูป</span>
+                <ScanLine className="w-3.5 h-3.5 text-blue-600" />
+                <span className="hidden sm:inline text-[11px]">สแกนสลิป</span>
+              </button>
+
+              {/* Daily Expense Slip Shortcut Button */}
+              <button
+                id="btn-header-daily-slip"
+                onClick={handleOpenDailySlip}
+                className="p-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors active:scale-95 shadow-2xs flex items-center gap-1 text-xs font-semibold"
+                title="ปุ่มลัดแคปรูปสลิปรายจ่ายประจำวัน (กด Ctrl+S หรือคลิกที่นี่)"
+              >
+                <Receipt className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-[11px]">สลิปวันนี้</span>
               </button>
 
               {/* Month Selector dropdown */}
@@ -269,7 +306,7 @@ export default function App() {
                 value={currentYearMonth}
                 onChange={e => setCurrentYearMonth(e.target.value)}
                 aria-label="เลือกเดือน"
-                className="px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-semibold text-slate-700 outline-none cursor-pointer transition-colors max-w-[105px] sm:max-w-[120px] truncate"
+                className="px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-xs font-semibold text-slate-700 outline-none cursor-pointer transition-colors max-w-[95px] sm:max-w-[120px] truncate"
               >
                 {availableMonths.map(ym => (
                   <option key={ym} value={ym}>
@@ -417,37 +454,63 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Home Screen App Icon Prompt Banner */}
-              <div
-                onClick={() => setIsA2HSOpen(true)}
-                className="cursor-pointer bg-gradient-to-r from-slate-900 to-blue-950 rounded-2xl p-3 text-white flex items-center justify-between gap-3 border border-slate-700/60 shadow-xs hover:border-blue-400/50 transition-colors"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="relative shrink-0">
-                    <img
-                      src="/apple-touch-icon.png"
-                      alt="กระเป๋าตังสีแดง"
-                      className="w-9 h-9 rounded-xl object-cover shadow-md border border-white/20"
-                      referrerPolicy="no-referrer"
-                    />
-                    <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full border border-slate-900" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-white">Add to Home Screen</span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
-                        กระเป๋าตังสีแดง
-                      </span>
+              {/* New Features: Slip Scanner & Daily Expense Slip Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Feature 1: Slip OCR Scanner */}
+                <div
+                  id="card-slip-scanner"
+                  onClick={() => setIsSlipScannerOpen(true)}
+                  className="cursor-pointer bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 rounded-2xl p-3.5 text-white flex items-center justify-between gap-3 border border-blue-500/30 shadow-md hover:border-blue-400 transition-all hover:scale-[1.01] active:scale-99 group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600/40 border border-cyan-400/40 text-cyan-300 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
+                      <ScanLine className="w-5 h-5" />
                     </div>
-                    <p className="text-[11px] text-slate-300 truncate mt-0.5">
-                      แตะเพื่อดูวิธีติดตั้งเป็นแอปบน iPhone และ Android
-                    </p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-white">จดผ่านสลิปโอนเงิน</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40">
+                          AI Scan
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 truncate mt-0.5">
+                        อัปโหลดหรือแคปสลิป AI อ่านยอดให้อัตโนมัติ
+                      </p>
+                    </div>
                   </div>
+
+                  <span className="shrink-0 text-xs font-bold text-cyan-400 group-hover:translate-x-0.5 transition-transform">
+                    สแกน &gt;
+                  </span>
                 </div>
 
-                <span className="shrink-0 text-[11px] font-bold text-sky-400 hover:underline">
-                  ดูวิธีทำ &gt;
-                </span>
+                {/* Feature 2: Daily Expense Slip (Shortcut) */}
+                <div
+                  id="card-daily-expense-slip"
+                  onClick={handleOpenDailySlip}
+                  className="cursor-pointer bg-white rounded-2xl p-3.5 text-slate-900 flex items-center justify-between gap-3 border border-blue-200/90 shadow-2xs hover:border-blue-400 hover:shadow-md transition-all hover:scale-[1.01] active:scale-99 group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Receipt className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-900">สลิปรายจ่ายประจำวัน</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-100 text-blue-700 font-bold">
+                          ปุ่มลัด Ctrl+S
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        แตะเพื่อดู/แชร์สลิปสรุปรายจ่ายวันนี้
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="shrink-0 text-xs font-bold text-blue-600 group-hover:translate-x-0.5 transition-transform">
+                    เปิดดู &gt;
+                  </span>
+                </div>
               </div>
 
               {/* Month's Transactions List */}
@@ -617,10 +680,32 @@ export default function App() {
           filename={capturedFilename}
         />
 
-        {/* Add to Home Screen Instructions Modal */}
-        <AddToHomeScreenModal
-          isOpen={isA2HSOpen}
-          onClose={() => setIsA2HSOpen(false)}
+        {/* Slip Success Toast */}
+        {slipSuccessToast && (
+          <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-full shadow-2xl border border-blue-400/50 flex items-center gap-2 text-xs font-bold animate-in slide-in-from-top-4 duration-200">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span>{slipSuccessToast}</span>
+          </div>
+        )}
+
+        {/* Daily Expense Slip Modal (Visual Summary Slip with Shortcut) */}
+        <DailyExpenseSlipModal
+          isOpen={isDailySlipOpen}
+          onClose={() => setIsDailySlipOpen(false)}
+          transactions={transactions}
+          currentYearMonth={currentYearMonth}
+          budget={budget}
+        />
+
+        {/* Slip Scanner Modal (AI OCR & Record Expense) */}
+        <SlipScannerModal
+          isOpen={isSlipScannerOpen}
+          onClose={() => setIsSlipScannerOpen(false)}
+          onSave={data => {
+            handleSaveTransaction(data);
+            setSlipSuccessToast(`บันทึกรายจ่าย ฿${data.amount.toLocaleString()} จากสลิปเรียบร้อยแล้ว!`);
+            setTimeout(() => setSlipSuccessToast(null), 3500);
+          }}
         />
       </div>
     </IPhone16Frame>

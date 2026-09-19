@@ -1,12 +1,13 @@
 import { useState, useEffect, ReactNode, RefObject } from 'react';
-import { Wifi, Battery, Smartphone, Monitor, Sparkles, Bell, Camera, Download, Home, Loader2 } from 'lucide-react';
+import { Wifi, Battery, Smartphone, Monitor, Sparkles, Bell, Camera, Download, Home, Loader2, Receipt } from 'lucide-react';
 
 interface IPhone16FrameProps {
   children: ReactNode;
   activeAlert?: string | null;
   budgetStatus?: { isOver: boolean; percent: number; text: string };
   onCaptureScreen?: () => void;
-  onOpenA2HS?: () => void;
+  onOpenDailySlip?: () => void;
+  onOpenSlipScanner?: () => void;
   isCapturing?: boolean;
   screenRef?: RefObject<HTMLDivElement | null>;
   isDeviceFramed: boolean;
@@ -20,7 +21,8 @@ export const IPhone16Frame = ({
   activeAlert,
   budgetStatus,
   onCaptureScreen,
-  onOpenA2HS,
+  onOpenDailySlip,
+  onOpenSlipScanner,
   isCapturing = false,
   screenRef,
   isDeviceFramed,
@@ -44,11 +46,13 @@ export const IPhone16Frame = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Listen for capture action to trigger shutter flash
+  // Listen for capture action to trigger shutter flash and show daily expense slip
   const handleCaptureClick = () => {
     setShowShutterFlash(true);
     setTimeout(() => setShowShutterFlash(false), 300);
-    if (onCaptureScreen) {
+    if (onOpenDailySlip) {
+      onOpenDailySlip();
+    } else if (onCaptureScreen) {
       onCaptureScreen();
     }
   };
@@ -92,26 +96,22 @@ export const IPhone16Frame = ({
       {/* Top Floating Device Control Bar (visible on sm/desktop) */}
       <div className="w-full max-w-2xl sm:max-w-4xl mb-2 sm:mb-3 px-3 py-1.5 rounded-2xl sm:rounded-full bg-slate-900/90 backdrop-blur-md border border-slate-800 text-xs text-slate-300 shadow-xl flex flex-wrap items-center justify-between gap-2 z-40">
         <div className="flex items-center gap-2">
-          {/* App Icon preview & title */}
-          <button
-            onClick={onOpenA2HS}
-            className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-slate-800 transition-colors group"
-            title="คลิกเพื่อดูวิธีเพิ่มลงหน้าจอโฮม (Add to Home Screen) พร้อมไอคอนกระเป๋าตังสีแดง"
-          >
+          {/* App Brand & Icon preview */}
+          <div className="flex items-center gap-1.5 p-1">
             <div className="relative">
               <img
                 src="/apple-touch-icon.png"
                 alt="กระเป๋าตังสีแดง"
-                className="w-5 h-5 rounded-md object-cover shadow-sm group-hover:scale-105 transition-transform"
+                className="w-5 h-5 rounded-md object-cover shadow-sm"
                 referrerPolicy="no-referrer"
               />
               <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-rose-500 rounded-full" />
             </div>
             <span className="font-bold text-white text-xs tracking-tight">กระเป๋าตัง</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 font-semibold border border-rose-500/30">
-              Red Wallet Icon
+            <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 font-semibold border border-blue-500/30">
+              โอนเงิน & แคปสลิป
             </span>
-          </button>
+          </div>
 
           <span className="text-slate-600 hidden sm:inline">|</span>
 
@@ -132,30 +132,36 @@ export const IPhone16Frame = ({
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          {/* Capture Screen Quick Button */}
+          {/* Slip Scanner Quick Button */}
+          {onOpenSlipScanner && (
+            <button
+              id="btn-topbar-slip-scanner"
+              onClick={onOpenSlipScanner}
+              className="flex items-center gap-1 text-[11px] font-semibold text-sky-200 hover:text-white bg-slate-800 hover:bg-slate-700 active:scale-95 px-2.5 py-1 rounded-full border border-sky-500/30 transition-all shadow-xs"
+              title="จดบันทึกรายจ่ายอัตโนมัติจากสลิปโอนเงินผ่าน AI"
+            >
+              <Sparkles className="w-3 h-3 text-cyan-400" />
+              <span>สแกนสลิปโอน</span>
+            </button>
+          )}
+
+          {/* Daily Expense Slip Quick Shortcut Button */}
           <button
             id="btn-capture-screen-topbar"
             onClick={handleCaptureClick}
             disabled={isCapturing}
             className="flex items-center gap-1 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-500 active:scale-95 px-2.5 py-1 rounded-full shadow-sm transition-all"
-            title="แคปเจอร์หน้าจอและเซฟเป็นไฟล์รูปภาพทันที"
+            title="ปุ่มลัด: แคปดูรูปสลิปสรุปรายจ่ายประจำวัน (หรือกดปุ่ม Camera Control ข้างเครื่อง / Ctrl+S)"
           >
             {isCapturing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
               <Camera className="w-3.5 h-3.5" />
             )}
-            <span>แคปหน้าจอ</span>
-          </button>
-
-          {/* Add to Home Screen info */}
-          <button
-            onClick={onOpenA2HS}
-            className="flex items-center gap-1 text-[11px] text-slate-300 hover:text-white hover:bg-slate-800 px-2 py-1 rounded-full transition-colors"
-            title="วิธีเพิ่มลงหน้าจอโฮมพร้อมรูปกระเป๋าตังสีแดง"
-          >
-            <Home className="w-3.5 h-3.5 text-rose-400" />
-            <span className="hidden sm:inline">Add to Home</span>
+            <span>แคปสลิปประจำวัน</span>
+            <span className="hidden sm:inline text-[9px] bg-blue-800/80 px-1 py-0.2 rounded text-blue-200 ml-0.5">
+              Ctrl+S
+            </span>
           </button>
 
           {/* Titanium Colors (only when framed) */}
@@ -219,13 +225,13 @@ export const IPhone16Frame = ({
 
             {/* Right side: Power / Side button */}
             <div className="hidden sm:block absolute -right-[4px] top-[190px] w-[4px] h-[78px] bg-slate-300 rounded-r-sm shadow-sm" />
-            {/* Right side: iPhone 16 Pro Max Camera Control button (Interactive - triggers screen capture!) */}
+            {/* Right side: iPhone 16 Pro Max Camera Control button (Interactive - triggers daily expense slip capture!) */}
             <button
               id="btn-iphone-camera-control"
               onClick={handleCaptureClick}
               disabled={isCapturing}
               className="hidden sm:block absolute -right-[4px] top-[590px] w-[4px] h-[50px] bg-blue-300 hover:bg-white rounded-r-sm shadow-inner cursor-pointer transition-colors active:scale-95"
-              title="ปุ่ม Camera Control ของ iPhone 16 - แตะเพื่อแคปหน้าจอทันที"
+              title="ปุ่มลัด Camera Control ของ iPhone 16 - แตะเพื่อเปิดสลิปสรุปรายจ่ายประจำวันทันที"
             />
           </>
         )}
@@ -328,8 +334,8 @@ export const IPhone16Frame = ({
                     onClick={handleCaptureClick}
                     className="text-blue-600 font-bold hover:underline flex items-center gap-1"
                   >
-                    <Camera className="w-3 h-3" />
-                    <span>แคปหน้าจอ</span>
+                    <Receipt className="w-3 h-3" />
+                    <span>สลิปรายจ่ายวันนี้</span>
                   </button>
                 </div>
               )}
@@ -344,19 +350,22 @@ export const IPhone16Frame = ({
                 <span className="text-slate-300 font-medium">มุมมองหน้าเว็บเต็มจอ</span>
               </div>
               <div className="flex items-center gap-3 text-slate-400 text-[11px]">
+                {onOpenSlipScanner && (
+                  <button
+                    onClick={onOpenSlipScanner}
+                    className="text-sky-300 hover:text-white flex items-center gap-1 font-medium transition-colors"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>สแกนสลิปโอนเงิน</span>
+                  </button>
+                )}
                 <button
                   onClick={handleCaptureClick}
-                  className="text-sky-300 hover:text-white flex items-center gap-1 font-medium transition-colors"
+                  className="text-blue-400 hover:text-white flex items-center gap-1 font-medium transition-colors"
+                  title="กดปุ่มลัด Ctrl+S หรือคลิกที่นี่เพื่อดูสลิปสรุปรายจ่ายประจำวัน"
                 >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>บันทึกภาพหน้าจอ</span>
-                </button>
-                <button
-                  onClick={onOpenA2HS}
-                  className="text-rose-300 hover:text-white flex items-center gap-1 font-medium transition-colors"
-                >
-                  <Home className="w-3.5 h-3.5" />
-                  <span>ไอคอนกระเป๋าตังสีแดง</span>
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span>สลิปรายจ่ายประจำวัน (Ctrl+S)</span>
                 </button>
               </div>
             </div>
