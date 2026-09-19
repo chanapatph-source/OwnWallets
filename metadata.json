@@ -1,0 +1,6 @@
+{
+  "name": "ระบบบันทึกรายรับรายจ่าย",
+  "description": "ระบบบันทึกรายรับรายจ่ายส่วนบุคคล สรุปค่าใช้จ่ายรายเดือนผ่านกราฟ แจ้งเตือนงบประมาณ ส่งออกไฟล์ Excel และเชื่อมต่อ Google Sheets",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
