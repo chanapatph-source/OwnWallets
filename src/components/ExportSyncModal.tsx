@@ -1,9 +1,29 @@
 import { useState } from 'react';
-import { X, FileSpreadsheet, CloudUpload, ExternalLink, CheckCircle, AlertCircle, Loader2, Download } from 'lucide-react';
+import {
+  X,
+  FileSpreadsheet,
+  CloudUpload,
+  ExternalLink,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  Download,
+  Copy,
+  Check,
+  ShieldAlert,
+  Sparkles,
+} from 'lucide-react';
 import { Transaction } from '../types';
 import { exportTransactionsToExcel } from '../lib/excel';
 import { syncToGoogleSheets } from '../lib/sheets';
-import { googleSignIn, logout, getAccessToken } from '../lib/auth';
+import {
+  googleSignIn,
+  logout,
+  getAccessToken,
+  signInWithGSI,
+  getDomainConfig,
+  UnauthorizedDomainError,
+} from '../lib/auth';
 import { formatMonthLabel } from '../lib/constants';
 import { getStoredSpreadsheetId, saveStoredSpreadsheetId, getStoredSpreadsheetUrl } from '../lib/storage';
 import { User } from 'firebase/auth';
@@ -35,6 +55,12 @@ export const ExportSyncModal = ({
     return existingUrl ? { url: existingUrl, count: transactions.length } : null;
   });
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [unauthorizedDomain, setUnauthorizedDomain] = useState<{
+    domain: string;
+    recommendedWildcard: string;
+    settingsUrl: string;
+  } | null>(null);
+  const [copiedDomain, setCopiedDomain] = useState(false);
 
   if (!isOpen) return null;
 
@@ -54,6 +80,7 @@ export const ExportSyncModal = ({
   const handleGoogleSignIn = async () => {
     setIsLoggingIn(true);
     setErrorMessage('');
+    setUnauthorizedDomain(null);
     try {
       const res = await googleSignIn();
       if (res) {
@@ -61,13 +88,46 @@ export const ExportSyncModal = ({
       }
     } catch (err: any) {
       console.error('Google Sign In Error:', err);
-      setErrorMessage(err.message || 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ');
+      if (
+        err instanceof UnauthorizedDomainError ||
+        err?.code === 'auth/unauthorized-domain' ||
+        err?.message?.includes('auth/unauthorized-domain') ||
+        err?.message?.includes('unauthorized-domain')
+      ) {
+        const domainCfg = getDomainConfig();
+        setUnauthorizedDomain({
+          domain: err.domain || domainCfg.currentDomain,
+          recommendedWildcard: domainCfg.recommendedWildcard,
+          settingsUrl: err.settingsUrl || domainCfg.settingsUrl,
+        });
+        setErrorMessage('Firebase: โดเมนยังไม่ได้รับอนุญาตใน Firebase Authentication (auth/unauthorized-domain)');
+      } else {
+        setErrorMessage(err.message || 'เข้าสู่ระบบด้วย Google ไม่สำเร็จ');
+      }
     } finally {
       setIsLoggingIn(false);
     }
   };
 
-  // 3. Sync to Google Sheets
+  // 3. Fallback GSI Token Client Sign-in
+  const handleGsiSignIn = async () => {
+    setIsLoggingIn(true);
+    setErrorMessage('');
+    try {
+      const res = await signInWithGSI();
+      if (res) {
+        onUserAuthChange(res.user, res.accessToken);
+        setUnauthorizedDomain(null);
+      }
+    } catch (err: any) {
+      console.error('GSI Sign In Error:', err);
+      setErrorMessage(err.message || 'เชื่อมต่อ Google ไม่สำเร็จ');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // 4. Sync to Google Sheets
   const handleSyncToSheets = async () => {
     setIsSyncing(true);
     setErrorMessage('');
@@ -103,7 +163,22 @@ export const ExportSyncModal = ({
       });
     } catch (err: any) {
       console.error('Sync to sheets failed:', err);
-      setErrorMessage(err.message || 'ส่งข้อมูลไปยัง Google Sheets ไม่สำเร็จ');
+      if (
+        err instanceof UnauthorizedDomainError ||
+        err?.code === 'auth/unauthorized-domain' ||
+        err?.message?.includes('auth/unauthorized-domain') ||
+        err?.message?.includes('unauthorized-domain')
+      ) {
+        const domainCfg = getDomainConfig();
+        setUnauthorizedDomain({
+          domain: err.domain || domainCfg.currentDomain,
+          recommendedWildcard: domainCfg.recommendedWildcard,
+          settingsUrl: err.settingsUrl || domainCfg.settingsUrl,
+        });
+        setErrorMessage('Firebase: โดเมนยังไม่ได้รับอนุญาตใน Firebase Authentication (auth/unauthorized-domain)');
+      } else {
+        setErrorMessage(err.message || 'ส่งข้อมูลไปยัง Google Sheets ไม่สำเร็จ');
+      }
     } finally {
       setIsSyncing(false);
     }
@@ -176,7 +251,99 @@ export const ExportSyncModal = ({
             </div>
           </div>
 
-          {errorMessage && (
+          {/* Unauthorized Domain Troubleshooting Box */}
+          {unauthorizedDomain && (
+            <div
+              id="box-unauthorized-domain-help"
+              className="p-4 bg-amber-50/95 border border-amber-300 rounded-2xl text-xs space-y-3 shadow-xs animate-in fade-in"
+            >
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <ShieldAlert className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-amber-950 text-xs">
+                    วิธีแก้ไข: เพิ่มโดเมนใน Firebase Authentication
+                  </h4>
+                  <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+                    Firebase บล็อกการเข้าสู่ระบบไว้เนื่องจากโดเมนของแอปยังไม่ได้ถูกเพิ่มในรายชื่อ <strong>Authorized Domains</strong>
+                  </p>
+                </div>
+              </div>
+
+              {/* Current Domain with Copy button */}
+              <div className="p-2.5 bg-white/95 border border-amber-200/90 rounded-xl space-y-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  โดเมนที่ต้องนำไปเพิ่ม:
+                </span>
+                <div className="flex items-center justify-between gap-2">
+                  <code className="text-[11px] font-mono font-semibold text-slate-800 truncate px-2 py-1 bg-slate-100 rounded-lg flex-1 select-all">
+                    {unauthorizedDomain.domain || window.location.hostname}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(unauthorizedDomain.domain || window.location.hostname);
+                      setCopiedDomain(true);
+                      setTimeout(() => setCopiedDomain(false), 2500);
+                    }}
+                    className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 shrink-0"
+                  >
+                    {copiedDomain ? (
+                      <>
+                        <Check className="w-3 h-3 text-white" />
+                        <span>คัดลอกแล้ว</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span>คัดลอก</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  💡 <em>ทิป:</em> คุณสามารถกรอก <code className="font-mono text-amber-900 font-bold bg-amber-100 px-1 rounded">run.app</code> เพื่ออนุญาตทุก URL พรีวิวบน Cloud Run ได้พร้อมกัน
+                </p>
+              </div>
+
+              {/* 3 Steps */}
+              <div className="text-[11px] text-amber-950 space-y-1 pl-1">
+                <p className="font-bold">ขั้นตอนการเพิ่ม (ทำครั้งเดียว):</p>
+                <ol className="list-decimal list-inside space-y-1 text-amber-900 text-[11px] leading-relaxed">
+                  <li>กดปุ่ม <strong>"เปิดหน้าตั้งค่า Firebase"</strong> ด้านล่าง</li>
+                  <li>มองหาหัวข้อ <strong>Authorized domains</strong> แล้วกด <strong>Add domain</strong></li>
+                  <li>วางโดเมนที่คัดลอกไว้ (หรือพิมพ์ <code className="font-mono bg-amber-200/70 px-1 rounded font-bold">run.app</code>) แล้วกด <strong>Add</strong></li>
+                  <li>กลับมาที่หน้านี้แล้วกดปุ่มเข้าสู่ระบบอีกครั้ง</li>
+                </ol>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <a
+                  href={unauthorizedDomain.settingsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                >
+                  <span>เปิดหน้าตั้งค่า Firebase Console</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <button
+                  type="button"
+                  onClick={handleGsiSignIn}
+                  disabled={isLoggingIn}
+                  className="py-2 px-3 bg-white border border-amber-300 hover:bg-amber-100/60 text-amber-950 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  title="เข้าสู่ระบบผ่าน Google Identity Services โดยตรง"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span>ลองเชื่อมต่อผ่าน Google GIS</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {errorMessage && !unauthorizedDomain && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
               <span>{errorMessage}</span>
