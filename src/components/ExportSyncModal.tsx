@@ -11,7 +11,6 @@ import {
   Copy,
   Check,
   ShieldAlert,
-  Sparkles,
 } from 'lucide-react';
 import { Transaction } from '../types';
 import { exportTransactionsToExcel } from '../lib/excel';
@@ -20,7 +19,6 @@ import {
   googleSignIn,
   logout,
   getAccessToken,
-  signInWithGSI,
   getDomainConfig,
   UnauthorizedDomainError,
 } from '../lib/auth';
@@ -109,25 +107,7 @@ export const ExportSyncModal = ({
     }
   };
 
-  // 3. Fallback GSI Token Client Sign-in
-  const handleGsiSignIn = async () => {
-    setIsLoggingIn(true);
-    setErrorMessage('');
-    try {
-      const res = await signInWithGSI();
-      if (res) {
-        onUserAuthChange(res.user, res.accessToken);
-        setUnauthorizedDomain(null);
-      }
-    } catch (err: any) {
-      console.error('GSI Sign In Error:', err);
-      setErrorMessage(err.message || 'เชื่อมต่อ Google ไม่สำเร็จ');
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  // 4. Sync to Google Sheets
+  // 3. Sync to Google Sheets
   const handleSyncToSheets = async () => {
     setIsSyncing(true);
     setErrorMessage('');
@@ -319,26 +299,16 @@ export const ExportSyncModal = ({
               </div>
 
               {/* Action buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <div className="pt-1">
                 <a
                   href={unauthorizedDomain.settingsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                  className="w-full py-2.5 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                 >
-                  <span>เปิดหน้าตั้งค่า Firebase Console</span>
+                  <span>เปิดหน้าตั้งค่า Firebase Console (Authorized Domains)</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
-                <button
-                  type="button"
-                  onClick={handleGsiSignIn}
-                  disabled={isLoggingIn}
-                  className="py-2 px-3 bg-white border border-amber-300 hover:bg-amber-100/60 text-amber-950 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors"
-                  title="เข้าสู่ระบบผ่าน Google Identity Services โดยตรง"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                  <span>ลองเชื่อมต่อผ่าน Google GIS</span>
-                </button>
               </div>
             </div>
           )}
