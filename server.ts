@@ -50,32 +50,50 @@ app.post("/api/parse-slip", async (req, res) => {
     // Strip data url prefix if present
     const cleanBase64 = imageBase64.replace(/^data:image\/[a-z0-9-+.]+;base64,/, "");
 
-    const prompt = `You are an expert AI for OCR and information extraction from Thai bank transfer slips (สลิปโอนเงิน / ใบเสร็จโอนเงินผ่านธนาคารไทย เช่น KBank, SCB, Krungthai, Bangkok Bank, TTB, GSB, TrueMoney, PromptPay).
-Carefully read the provided image of a transfer slip and extract all financial transaction details into the following strict JSON schema:
+    const prompt = `You are a specialized precision OCR engine for Thai bank transfer slips (สลิปโอนเงิน / ใบเสร็จธนาคารไทย).
+Your critical task is to accurately read the EXACT amount of money transferred (จำนวนเงินที่โอน), recipient/merchant, date, and time.
+
+Common Thai banking apps:
+- KBank (กสิกรไทย - K PLUS): look for "จำนวนเงิน" or large bold number in baht, e.g. "85.00" or "1,250.00".
+- SCB (ไทยพาณิชย์ - SCB EASY): look for "จำนวนเงิน (บาท)" or bold transaction amount.
+- Krungthai (กรุงไทย - Krungthai NEXT): look for "จำนวนเงิน" or "บาท / THB".
+- Bangkok Bank (บัวหลวง / Bualuang mBanking): look for "จำนวนเงิน".
+- TTB (ทีเอ็มบีธนชาต / ttb touch), GSB (ออมสิน / MyMo), TrueMoney Wallet, PromptPay (พร้อมเพย์).
+
+IMPORTANT RULES FOR AMOUNT:
+1. "amount": Extract the PRIMARY transferred amount. Must be a positive floating number without commas or currency symbols (e.g., 85, 1250, 420.50).
+2. DO NOT confuse the transfer amount with fee ("ค่าธรรมเนียม: 0.00"), remaining balance ("ยอดเงินคงเหลือ"), account number digits, or date numbers.
+3. If amount has decimals like .00, extract as number e.g. 500 or 500.0.
+
+IMPORTANT RULES FOR DATE & TIME:
+1. "date": In standard format "YYYY-MM-DD" (e.g. "2026-09-19"). If slip shows Buddhist Era (พ.ศ. 2567 -> 2024, 2568 -> 2025, 2569 -> 2026), calculate Gregorian year accurately. If year is omitted or unclear, default to current year 2026.
+2. "time": Transfer time in 24-hour format "HH:mm" (e.g. "14:35", "08:12").
+
+OUTPUT JSON SCHEMA:
 {
-  "amount": <number, positive float, the transferred money amount e.g. 150.00. Do NOT include currency symbols or commas>,
-  "date": <string, transfer date in format "YYYY-MM-DD", e.g. "2026-09-19". If Thai Buddhist year (พ.ศ.) is on slip like 2567, 2568, 2569, convert to Gregorian CE year like 2024, 2025, 2026>,
-  "time": <string, transfer time in 24h format "HH:mm", e.g. "14:32">,
-  "recipient": <string, name of recipient or merchant or promptpay ID, e.g. "ร้านกาแฟชื่นใจ" or "นาย สมชาย ใจดี">,
-  "sender": <string, name of sender if visible>,
-  "bank": <string, bank name e.g. "กสิกรไทย", "ไทยพาณิชย์", "กรุงไทย", "พร้อมเพย์", "ทรูมันนี่">,
-  "categoryId": <string, choose exactly one from: "food", "transport", "shopping", "bills", "entertainment", "health", "education", "other_expense">,
-  "categoryName": <string in Thai matching categoryId>,
-  "note": <string, note or description of this transaction, e.g. "โอนเงินให้ นาย สมชาย" or note found on slip>,
+  "amount": <number, mandatory, positive number>,
+  "date": <string, "YYYY-MM-DD">,
+  "time": <string, "HH:mm">,
+  "recipient": <string, name of recipient / receiver / promptpay account / merchant / shop>,
+  "sender": <string, name of sender / payer>,
+  "bank": <string, bank name e.g. "กสิกรไทย", "ไทยพาณิชย์", "กรุงไทย", "พร้อมเพย์", "ttb", "ออมสิน", "ทรูมันนี่">,
+  "categoryId": <string, one of: "food", "transport", "shopping", "bills", "entertainment", "health", "education", "other_expense">,
+  "categoryName": <string, category title in Thai>,
+  "note": <string, memo or note written on slip or reasonable summary e.g. "โอนเงินให้ ...">,
   "confidence": <number between 0.0 and 1.0>
 }
 
 Classification rules for categoryId:
-- "food": restaurants, cafes, food stalls, 7-Eleven, GrabFood, Lineman, food purchases
-- "transport": BTS, MRT, gas stations (PTT, Bangchak, Shell, Caltex), taxi, Grab transport
-- "shopping": Shopee, Lazada, retail stores, clothing, gadgets
-- "bills": electricity, water, internet, phone bill, rent, condo common fee
-- "entertainment": movies, games, travel, hotels, attractions
-- "health": hospital, clinic, pharmacy, vitamins, medicines
-- "education": books, tuition, courses, school supplies
-- "other_expense": personal transfers or general expenses not categorized above
+- "food": restaurants, food stalls, cafes, 7-Eleven, GrabFood, Lineman, coffee, tea, meals
+- "transport": BTS, MRT, gas/fuel (PTT, Bangchak, Shell, Caltex), taxi, tolls, Grab ride
+- "shopping": Shopee, Lazada, TikTok Shop, retail stores, clothes, electronics
+- "bills": electricity (PEA/MEA), water (MWA/PWA), internet (True, AIS, 3BB), rent, mobile phone bills
+- "entertainment": cinema, games, travel, hotels, vacations
+- "health": hospitals, clinics, pharmacies, dental
+- "education": tuition, books, courses, school fees
+- "other_expense": general transfers to individuals, debts, miscellaneous
 
-Return ONLY the raw JSON object, no Markdown ticks.`;
+Return strictly raw valid JSON. Do not include markdown codeblocks (\`\`\`json).`;
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
@@ -101,7 +119,23 @@ Return ONLY the raw JSON object, no Markdown ticks.`;
     });
 
     const responseText = response.text || "{}";
-    const data = JSON.parse(responseText);
+    let data: any = {};
+    try {
+      const cleanJson = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+      data = JSON.parse(cleanJson);
+    } catch (parseErr) {
+      console.warn("Failed direct JSON parse, attempting substring match:", parseErr);
+      const match = responseText.match(/\{[\s\S]*\}/);
+      if (match) {
+        data = JSON.parse(match[0]);
+      }
+    }
+
+    // Ensure amount is parsed to a clean number
+    if (data && data.amount !== undefined) {
+      const parsedNum = parseFloat(String(data.amount).replace(/,/g, ""));
+      data.amount = isNaN(parsedNum) ? 0 : parsedNum;
+    }
 
     return res.json({
       success: true,

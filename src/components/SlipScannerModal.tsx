@@ -14,6 +14,7 @@ import {
   Tag,
   FileImage,
   RefreshCw,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Transaction, TransactionType } from '../types';
 import { DEFAULT_EXPENSE_CATEGORIES, formatThaiCurrency } from '../lib/constants';
@@ -22,7 +23,8 @@ import { CategoryIcon } from './CategoryIcon';
 interface SlipScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  onSave: (data: Omit<Transaction, 'id' | 'createdAt'>, syncToCloud?: boolean) => void;
+  isCloudConnected?: boolean;
 }
 
 interface ParsedSlipData {
@@ -98,12 +100,14 @@ export const SlipScannerModal = ({
   isOpen,
   onClose,
   onSave,
+  isCloudConnected = false,
 }: SlipScannerModalProps) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedSlipData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [syncToCloud, setSyncToCloud] = useState<boolean>(true);
 
   // Editable form fields
   const [amount, setAmount] = useState<string>('');
@@ -128,6 +132,7 @@ export const SlipScannerModal = ({
       setNote('');
       setBank('');
       setRecipient('');
+      setSyncToCloud(true);
     }
   }, [isOpen]);
 
@@ -196,8 +201,10 @@ export const SlipScannerModal = ({
           DEFAULT_EXPENSE_CATEGORIES.find(c => c.id === d.categoryId) ||
           DEFAULT_EXPENSE_CATEGORIES[0];
 
+        const parsedAmount = typeof d.amount === 'number' ? d.amount : parseFloat(String(d.amount).replace(/,/g, ''));
+
         const parsed: ParsedSlipData = {
-          amount: Number(d.amount) || 0,
+          amount: isNaN(parsedAmount) ? 0 : parsedAmount,
           date: d.date || new Date().toISOString().slice(0, 10),
           time: d.time || '',
           recipient: d.recipient || '',
@@ -206,7 +213,7 @@ export const SlipScannerModal = ({
           categoryId: matchedCategory.id,
           categoryName: matchedCategory.name,
           note: d.note || (d.recipient ? `โอนให้ ${d.recipient}` : 'จ่ายผ่านสลิปโอนเงิน'),
-          confidence: d.confidence,
+          confidence: typeof d.confidence === 'number' ? d.confidence : 0.95,
         };
 
         applyParsedData(parsed);
@@ -334,14 +341,17 @@ export const SlipScannerModal = ({
       DEFAULT_EXPENSE_CATEGORIES.find(c => c.id === categoryId) ||
       DEFAULT_EXPENSE_CATEGORIES[0];
 
-    onSave({
-      type: 'expense' as TransactionType,
-      amount: numAmount,
-      categoryId: cat.id,
-      categoryName: cat.name,
-      date: date || new Date().toISOString().slice(0, 10),
-      note: note.trim() || (recipient ? `โอนให้ ${recipient}` : 'สลิปโอนเงิน'),
-    });
+    onSave(
+      {
+        type: 'expense' as TransactionType,
+        amount: numAmount,
+        categoryId: cat.id,
+        categoryName: cat.name,
+        date: date || new Date().toISOString().slice(0, 10),
+        note: note.trim() || (recipient ? `โอนให้ ${recipient}` : 'สลิปโอนเงิน'),
+      },
+      isCloudConnected && syncToCloud
+    );
 
     onClose();
   };
@@ -606,6 +616,29 @@ export const SlipScannerModal = ({
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-blue-500"
                 />
               </div>
+
+              {/* Cloud Sync Option */}
+              {isCloudConnected && (
+                <div className="p-2.5 bg-emerald-50/80 border border-emerald-200 rounded-xl flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div>
+                      <p className="text-[11px] font-bold text-emerald-900 leading-tight">
+                        อัปเดตไปยัง Google Sheets ทันที
+                      </p>
+                      <p className="text-[10px] text-emerald-700">
+                        ข้อมูลจะขึ้นบน Cloud ทันทีเพื่อให้เปิดเช็คในคอมได้
+                      </p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={syncToCloud}
+                    onChange={e => setSyncToCloud(e.target.checked)}
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>

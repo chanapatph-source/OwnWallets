@@ -14,6 +14,7 @@ import {
   Receipt,
   ScanLine,
   CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { User } from 'firebase/auth';
@@ -25,9 +26,13 @@ import {
   saveStoredBudget,
   calculateMonthlyStats,
   generateInitialData,
+  getStoredSpreadsheetId,
+  getStoredSpreadsheetUrl,
+  saveStoredSpreadsheetId,
 } from './lib/storage';
 import { formatThaiCurrency, formatMonthLabel } from './lib/constants';
 import { initAuth } from './lib/auth';
+import { syncToGoogleSheets } from './lib/sheets';
 import { IPhone16Frame } from './components/IPhone16Frame';
 import { BudgetAlertBanner } from './components/BudgetAlertBanner';
 import { MonthlyChartSummary } from './components/MonthlyChartSummary';
@@ -513,6 +518,56 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Feature 3: Google Sheets Cloud Sync Banner (Quick open/sync for PC checking) */}
+              <div
+                id="card-google-sheets-cloud"
+                className="bg-emerald-50/90 border border-emerald-200/90 rounded-2xl p-3 text-emerald-950 flex items-center justify-between gap-3 shadow-2xs"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <FileSpreadsheet className="w-4.5 h-4.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-emerald-900">
+                        {cachedToken ? 'เชื่อมต่อ Google Sheets แล้ว' : 'เชื่อมต่อกับ Google Sheets'}
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-200/80 text-emerald-800 font-bold">
+                        Cloud
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-700 truncate mt-0.5">
+                      {cachedToken && getStoredSpreadsheetId()
+                        ? 'ข้อมูลพร้อมเปิดดูหรือแก้ไขผ่านคอมพิวเตอร์แบบเรียลไทม์'
+                        : 'บันทึกข้อมูลขึ้นคลาวด์ เปิดเช็คบนคอมได้ตลอดเวลา'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {getStoredSpreadsheetUrl() && (
+                    <a
+                      href={getStoredSpreadsheetUrl()!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1 shadow-xs"
+                      title="เปิดดูไฟล์ชีทใน Google Sheets (บนคอมพิวเตอร์หรือแท็บใหม่)"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>เปิดชีท</span>
+                    </a>
+                  )}
+
+                  <button
+                    id="btn-trigger-sheets-sync"
+                    onClick={() => setIsExportModalOpen(true)}
+                    className="px-2.5 py-1.5 bg-white border border-emerald-300 hover:bg-emerald-100/50 text-emerald-800 text-xs font-bold rounded-xl transition-all"
+                  >
+                    {cachedToken ? 'ซิงค์ / ส่งออก' : 'เชื่อมต่อ'}
+                  </button>
+                </div>
+              </div>
+
               {/* Month's Transactions List */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between px-1">
@@ -701,9 +756,37 @@ export default function App() {
         <SlipScannerModal
           isOpen={isSlipScannerOpen}
           onClose={() => setIsSlipScannerOpen(false)}
-          onSave={data => {
-            handleSaveTransaction(data);
-            setSlipSuccessToast(`บันทึกรายจ่าย ฿${data.amount.toLocaleString()} จากสลิปเรียบร้อยแล้ว!`);
+          isCloudConnected={Boolean(cachedToken)}
+          onSave={async (data, syncToCloud) => {
+            const newTx: Transaction = {
+              ...data,
+              id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+              createdAt: Date.now(),
+            };
+            const updated = [newTx, ...transactions];
+            setTransactions(updated);
+            saveStoredTransactions(updated);
+
+            let toastMsg = `บันทึกรายจ่าย ฿${data.amount.toLocaleString()} จากสลิปเรียบร้อยแล้ว!`;
+
+            // If user requested syncToCloud and has active Google token
+            if (syncToCloud && cachedToken) {
+              try {
+                const sheetId = getStoredSpreadsheetId() || undefined;
+                const syncResult = await syncToGoogleSheets(
+                  cachedToken,
+                  updated,
+                  currentYearMonth,
+                  sheetId
+                );
+                saveStoredSpreadsheetId(syncResult.spreadsheetId);
+                toastMsg += ' (ซิงค์ขึ้น Google Sheets แล้ว)';
+              } catch (syncErr) {
+                console.warn('Auto cloud sync failed:', syncErr);
+              }
+            }
+
+            setSlipSuccessToast(toastMsg);
             setTimeout(() => setSlipSuccessToast(null), 3500);
           }}
         />

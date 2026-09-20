@@ -177,6 +177,11 @@ export const saveStoredSpreadsheetId = (id: string) => {
   localStorage.setItem(SPREADSHEET_ID_KEY, id);
 };
 
+export const getStoredSpreadsheetUrl = (): string | null => {
+  const id = getStoredSpreadsheetId();
+  return id ? `https://docs.google.com/spreadsheets/d/${id}/edit` : null;
+};
+
 // Calculate monthly statistics
 export const calculateMonthlyStats = (
   transactions: Transaction[],

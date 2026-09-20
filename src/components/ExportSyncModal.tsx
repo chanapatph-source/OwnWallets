@@ -5,7 +5,7 @@ import { exportTransactionsToExcel } from '../lib/excel';
 import { syncToGoogleSheets } from '../lib/sheets';
 import { googleSignIn, logout, getAccessToken } from '../lib/auth';
 import { formatMonthLabel } from '../lib/constants';
-import { getStoredSpreadsheetId, saveStoredSpreadsheetId } from '../lib/storage';
+import { getStoredSpreadsheetId, saveStoredSpreadsheetId, getStoredSpreadsheetUrl } from '../lib/storage';
 import { User } from 'firebase/auth';
 
 interface ExportSyncModalProps {
@@ -30,7 +30,10 @@ export const ExportSyncModal = ({
   const [exportScope, setExportScope] = useState<'month' | 'all'>('month');
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [sheetResult, setSheetResult] = useState<{ url: string; count: number } | null>(null);
+  const [sheetResult, setSheetResult] = useState<{ url: string; count: number } | null>(() => {
+    const existingUrl = getStoredSpreadsheetUrl();
+    return existingUrl ? { url: existingUrl, count: transactions.length } : null;
+  });
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   if (!isOpen) return null;
