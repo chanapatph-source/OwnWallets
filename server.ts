@@ -9,6 +9,12 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
+// Global Security Headers for OAuth popups
+app.use((req, res, next) => {
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  next();
+});
+
 // Body parser with 25MB limit for slip images
 app.use(express.json({ limit: "25mb" }));
 
